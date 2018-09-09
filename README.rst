@@ -26,7 +26,9 @@ Feedburner RSS feed summarizer
 Features
 --------
 
-* TODO
+* Reads any feedburner RSS feed
+* Persistent to disk - saves our precious internet bandwidth
+* Has tests
 
 Credits
 -------
