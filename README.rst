@@ -26,7 +26,7 @@ Feedburner RSS feed summarizer
 Features
 --------
 
-* Reads any feedburner RSS feed
+* Reads and summarizers any feedburner RSS feed
 * Persistent to disk - saves our precious internet bandwidth
 * Has tests
 
