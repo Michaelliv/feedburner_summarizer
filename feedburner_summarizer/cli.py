@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Console script for feedburner_summarizer."""
 import sys
 import click
