@@ -14,8 +14,6 @@ from src.rss_handler import RSSData
 
 class DocSummarizer:
     def __init__(self):
-        self.executor = ThreadPoolExecutor()
-        self.loop = asyncio.get_event_loop()
         self.en_most_common = set(self.load_en_most_common_file())
         self.nlp = spacy.load('en_core_web_sm')
 
@@ -54,7 +52,7 @@ class DocSummarizer:
         filtered_words = [k for k, v in word_count.items() if v > upper_bound]
         return filtered_words
 
-    async def summarize(self, rss_data: RSSData):
+    async def summarize(self, loop, executor, rss_data: RSSData):
         # We will process the text in multiple ways to achieve to have an easier job at extracting significant key words
 
         # First we pre-process the texts:
@@ -74,10 +72,14 @@ class DocSummarizer:
         iqr_filtered = self.filter_by_iqr(lemmatized_tokens)
 
         # Remove extremely rare words (using wikipedia)
-        futures = [self.loop.run_in_executor(self.executor, self.query_wikipedia, word) for word in iqr_filtered]
-        await asyncio.wait(futures)
+        futures = [loop.run_in_executor(executor, self.query_wikipedia, word) for word in iqr_filtered]
 
-        wiki_results = dict(ChainMap(*[f.result() for f in futures]))
-        wikipedia_validated = [word for word in iqr_filtered if word in wiki_results.get(word, False)]
+        if futures:
+            await asyncio.wait(futures)
 
-        return wikipedia_validated
+            wiki_results = dict(ChainMap(*[f.result() for f in futures]))
+            wikipedia_validated = [word for word in iqr_filtered if word in wiki_results.get(word, False)]
+
+            return wikipedia_validated
+        else:
+            return []
