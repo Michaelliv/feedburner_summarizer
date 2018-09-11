@@ -1,4 +1,4 @@
 pyDAL==17.11
 feedparser==5.2.1
-
+nltk
 
