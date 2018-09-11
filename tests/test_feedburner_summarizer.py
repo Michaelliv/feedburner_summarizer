@@ -6,6 +6,7 @@ from click.testing import CliRunner
 from feedparser import FeedParserDict
 
 from feedburner_summarizer import cli
+from feedburner_summarizer.doc_summarizer import DocSummarizer
 from feedburner_summarizer.rss_handler import FeedBurnerHandler, EntriesNotFoundError, EmptyFeedNameError
 
 
@@ -56,3 +57,69 @@ class TestFeedBurnerSummarizer(unittest.TestCase):
         entries = rss.map_entries(feed.entries)
         assert len(entries) > 0
 
+    def test_doc_summarizer_init(self):
+        DocSummarizer()
+
+    def test_doc_summarizer_load_en_most_commons_file(self):
+        summarizer = DocSummarizer()
+        assert len(summarizer.load_en_most_common_file()) == 1000
+
+    def test_doc_summarizer_cleanup_stopwords(self):
+        summarizer = DocSummarizer()
+
+        source_text = ["this", "is", "a", "stop", "word"]
+        expected_text = ["stop", "word"]
+
+        clean_text = summarizer.cleanup_stopwords(source_text)
+
+        assert clean_text == expected_text
+
+    def test_doc_summarizer_cleanup_most_common(self):
+        summarizer = DocSummarizer()
+
+        source_text = ["the", "of", "with", "what", "not_a_common_word"]
+        expected_text = ["not_a_common_word"]
+
+        clean_text = summarizer.cleanup_en_most_common_words(source_text)
+
+        assert clean_text == expected_text
+
+    def test_doc_summarizer_tokenize_words(self):
+        summarizer = DocSummarizer()
+
+        source_text = "Those are words"
+        expected_result = ["Those", "are", "words"]
+
+        tokenized = summarizer.tokenize_words(source_text)
+
+        assert tokenized == expected_result
+
+    def test_doc_summarizer_tokenize_sentences(self):
+        summarizer = DocSummarizer()
+
+        source_text = "Those. are. sentences."
+        expected_result = ["Those.", "are.", "sentences."]
+
+        tokenized = summarizer.tokenize_sentences(source_text)
+
+        assert tokenized == expected_result
+
+    def test_doc_summarizer_cleanup_punctuation(self):
+        summarizer = DocSummarizer()
+
+        source_text = "punctuation. is! annoying?"
+        expected_result = "punctuation is annoying"
+
+        no_punct = summarizer.cleanup_punctuation(source_text)
+
+        assert no_punct == expected_result
+
+    def test_doc_summarizer_cleanup_pipe(self):
+        summarizer = DocSummarizer()
+
+        source_text = "Those are not cleaned. this is text."
+        expected_result = ["cleaned", "text"]
+
+        tokenized = summarizer.standard_cleanup_pipe(source_text)
+
+        assert tokenized == expected_result
