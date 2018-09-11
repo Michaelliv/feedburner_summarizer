@@ -14,7 +14,7 @@ from src.rss_handler import RSSData
 
 class DocSummarizer:
     def __init__(self):
-        self.executor = ThreadPoolExecutor(max_workers=3)
+        self.executor = ThreadPoolExecutor()
         self.loop = asyncio.get_event_loop()
         self.en_most_common = set(self.load_en_most_common_file())
         self.nlp = spacy.load('en_core_web_sm')
@@ -28,16 +28,16 @@ class DocSummarizer:
         return self.nlp(text)
 
     def process(self, annotated_tokens: List):
-        return filter(self.cleanup, annotated_tokens)
+        return list(filter(self.cleanup, annotated_tokens))
 
     def cleanup(self, token):
         return (
-            len(token) >= 2 or                    # token is shorter or equal to 2 characters
-            token.is_alpha or                     # token is not alpha numeric
-            not token.is_punct or                 # token is not punctuation
-            not token.is_stop or                  # token is not is not a stop word
-            token not in self.en_most_common      # token is not one of english's most used words
-            # token.pos_ in ["PROPN", "NOUN"] and   # token is either noun or proper noun
+            len(token) >= 2 and                    # token is shorter or equal to 2 characters
+            token.is_alpha and                     # token is not alpha numeric
+            not token.is_punct and                 # token is not punctuation
+            not token.is_stop and                  # token is not is not a stop word
+            token not in self.en_most_common       # token is not one of english's most used words
+            # token.pos_ in ["PROPN", "NOUN"]        # token is either noun or proper noun
         )
 
     @staticmethod
@@ -45,7 +45,7 @@ class DocSummarizer:
         return {text: [w.lower() for w in wikipedia.search(text)]}
 
     @staticmethod
-    def filter_by_iqr(self, tokens: List[str]):
+    def filter_by_iqr(tokens: List[str]):
         word_count = Counter(tokens)
         values = list(word_count.values())
         quartile_1, quartile_3 = np.percentile(values, [25, 75])
@@ -67,8 +67,8 @@ class DocSummarizer:
         # Tokenize and lemmatize the text
 
         # Cleanup:
-        tokens = self.process(self.annotate(rss_data.title + " " + rss_data.content))
-        lemmatized_tokens = [t.lemma for t in tokens]
+        tokens = self.process(self.annotate((rss_data.title + " " + rss_data.content).lower()))
+        lemmatized_tokens = [t.lemma_ for t in tokens]
 
         # Outlier detection using IQR
         iqr_filtered = self.filter_by_iqr(lemmatized_tokens)
