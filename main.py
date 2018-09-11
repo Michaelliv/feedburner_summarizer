@@ -8,13 +8,15 @@ from src.rss_handler import FeedBurnerHandler, EmptyFeedNameError, EntriesNotFou
 
 
 @click.command()
-@click.argument("name")
-def summarize(name):
+@click.option("--name", prompt="Enter feed name please")
+@click.option("--nouns-enabled/--nouns-disabled", default=False)
+@click.option("--iqr-enabled/--iqr-disabled", default=False)
+def summarize(name, nouns_enabled, iqr_enabled):
     try:
         click.echo("Initializeing...")
 
         rss_handler = FeedBurnerHandler()
-        summarizer = DocSummarizer()
+        summarizer = DocSummarizer(nouns_enabled, iqr_enabled)
         executor = ThreadPoolExecutor()
 
         feed = rss_handler.fetch_latest(name)

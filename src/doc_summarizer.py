@@ -1,7 +1,6 @@
 import asyncio
 from collections import ChainMap
 from collections import Counter
-from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict
 
 import numpy as np
@@ -13,9 +12,11 @@ from src.rss_handler import RSSData
 
 
 class DocSummarizer:
-    def __init__(self):
+    def __init__(self, only_nouns_enabled = False, iqr_enabled = False):
         self.en_most_common = set(self.load_en_most_common_file())
-        self.nlp = spacy.load('en_core_web_sm')
+        self.nlp = spacy.load('en')
+        self.only_nouns_enabled = only_nouns_enabled
+        self.iqr_enabled = iqr_enabled
 
     @staticmethod
     def load_en_most_common_file(file_path: str = EN_MOST_COMMON_FILE):
@@ -29,14 +30,18 @@ class DocSummarizer:
         return list(filter(self.cleanup, annotated_tokens))
 
     def cleanup(self, token):
-        return (
+        conditions =  (
             len(token) >= 2 and                    # token is shorter or equal to 2 characters
             token.is_alpha and                     # token is not alpha numeric
             not token.is_punct and                 # token is not punctuation
             not token.is_stop and                  # token is not is not a stop word
             token not in self.en_most_common       # token is not one of english's most used words
-            # token.pos_ in ["PROPN", "NOUN"]        # token is either noun or proper noun
         )
+
+        if self.only_nouns_enabled:
+            conditions = conditions and (token.pos_ in ["PROPN", "NOUN"])  # token is either noun or proper noun
+
+        return conditions
 
     @staticmethod
     def query_wikipedia(text: str) -> Dict:
@@ -51,6 +56,13 @@ class DocSummarizer:
         upper_bound = quartile_3 + (iqr * 1.5)
         filtered_words = [k for k, v in word_count.items() if v > upper_bound]
         return filtered_words
+
+    def math_filters(self, tokens):
+        if self.iqr_enabled:
+            tokens = self.filter_by_iqr(tokens)
+
+        return tokens
+
 
     async def summarize(self, loop, executor, rss_data: RSSData):
         # We will process the text in multiple ways to achieve to have an easier job at extracting significant key words
@@ -68,17 +80,17 @@ class DocSummarizer:
         tokens = self.process(self.annotate((rss_data.title + " " + rss_data.content).lower()))
         lemmatized_tokens = [t.lemma_ for t in tokens]
 
-        # Outlier detection using IQR
-        iqr_filtered = self.filter_by_iqr(lemmatized_tokens)
+        # Mathematical filters
+        filtered = set(self.math_filters(lemmatized_tokens))
 
         # Remove extremely rare words (using wikipedia)
-        futures = [loop.run_in_executor(executor, self.query_wikipedia, word) for word in iqr_filtered]
+        futures = [loop.run_in_executor(executor, self.query_wikipedia, word) for word in filtered]
 
         if futures:
             await asyncio.wait(futures)
 
             wiki_results = dict(ChainMap(*[f.result() for f in futures]))
-            wikipedia_validated = [word for word in iqr_filtered if word in wiki_results.get(word, False)]
+            wikipedia_validated = [word for word in filtered if word in wiki_results.get(word, False)]
 
             return wikipedia_validated
         else:
