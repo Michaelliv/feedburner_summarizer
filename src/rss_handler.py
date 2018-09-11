@@ -12,7 +12,7 @@ class EntriesNotFoundError(Exception):
     pass
 
 
-class RSSData():
+class RSSData:
     def __init__(self, url: str, title: str, content: str):
         self.url = url
         self.title = title
@@ -35,4 +35,4 @@ class FeedBurnerHandler:
 
     @staticmethod
     def map_entries(entries: List) -> List[RSSData]:
-        return [RSSData(entry.link, entry.title, entry.summary) for entry in entries]
+        return [RSSData(entry.feedburner_origlink, entry.title, entry.summary) for entry in entries]
