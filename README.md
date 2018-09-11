@@ -8,6 +8,9 @@
 
 Usage
 -----
+
+** tested on python 3.6
+
 1) Fork repo
 ```
 git@github.com:Michaelliv/feedburner_summarizer.git
